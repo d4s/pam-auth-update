@@ -33,93 +33,245 @@ int cfgerror (const char *s) {
     int     num;
 };
 
-%token <str> STRING
-%token <num> NUMBER
-%token <str> YES
-%token <str> NO
+%token <str> CFG_STRING
+%token <num> CFG_NUMBER
+%token <num> CFG_YES
+%token <num> CFG_NO
 
-%token <str> NAME
-%token <str> DEFAULT
-%token <str> PRIORITY
+%token <str> CFG_PAM_STRING
+
+%token <str> CFG_NAME
+%token <str> CFG_DEFAULT
+%token <str> CFG_PRIORITY
+
+%token <str> CFG_PRIMARY
+%token <str> CFG_ADDITIONAL
+
+%token <str> CFG_AUTH
+%token <str> CFG_AUTH_MAIN
+%token <str> CFG_AUTH_INITIAL
+
+%token <str> CFG_ACCOUNT
+%token <str> CFG_ACCOUNT_MAIN
+%token <str> CFG_ACCOUNT_INITIAL
+
+%token <str> CFG_PASSWORD
+%token <str> CFG_PASSWORD_MAIN
+%token <str> CFG_PASSWORD_INITIAL
+
+%token <str> CFG_SESSION
+%token <str> CFG_SESSION_MAIN
+%token <str> CFG_SESSION_INITIAL
+%token <str> CFG_SESSION_NI
 
 
 %destructor { 
 	DBGPRINT("Unexpected NAME %s at line %d\n", $$, cfglineno);
 	free( $$);
-	} NAME
-%destructor { 
-	DBGPRINT("Unexpected STRING %s at line %d\n", $$, cfglineno);
+	} CFG_NAME
+%destructor {
+	DBGPRINT("Unexpected DEFAULT %s at line %d\n", $$, cfglineno);
 	free( $$);
-	} STRING
+	} CFG_DEFAULT
+%destructor {
+	DBGPRINT("Unexpected PRIORITY %s at line %d\n", $$, cfglineno);
+	free( $$);
+	} CFG_PRIORITY
 
 %start CONFIG
 %%
 
 /** Configuration for pam-auth-update **/
 CONFIG:
-    HNAME HDEFAULT HPRIORITY GROUPS
+    CFG_HNAME CFG_HDEFAULT CFG_HPRIORITY CFG_MODULES
     ;
 
-HNAME:
-    NAME STRING
+CFG_HNAME:
+    CFG_NAME CFG_STRING
     {
         DBGPRINT("NAME -- %s\n", $2);
+        free($1);
+        free($2);
     }
     ;
 
-HDEFAULT:
-    | DEFAULT YES
+CFG_HDEFAULT:
+    | CFG_DEFAULT CFG_YES
     {
-        DBGPRINT("DEFAULT -- '%s' (YES)\n", $2);
+        DBGPRINT("DEFAULT -- '%d' (YES)\n", $2);
+        free($1);
     }
-    | DEFAULT NO
+    | CFG_DEFAULT CFG_NO
     {
-        DBGPRINT("DEFAULT -- '%s' (NO)\n", $2);
+        DBGPRINT("DEFAULT -- '%d' (NO)\n", $2);
+        free($1);
     }
     ;
 
-HPRIORITY:
-    | PRIORITY NUMBER
+CFG_HPRIORITY:
+    | CFG_PRIORITY CFG_NUMBER
+    {
+        DBGPRINT("Priority -- '%d'\n", $2);
+        free($1);
+    }
     ;
 
-GROUPS:
-    | AUTH
-    | ACCOUNT
-    | PASSWORD
-    | SESSION
-    | SESSION_NI
+CFG_MODULES:
+    | CFG_AUTH_MODULE CFG_MODULES
+    | CFG_ACCOUNT_MODULE CFG_MODULES
+    | CFG_PASSWORD_MODULE CFG_MODULES
+    | CFG_SESSION_MODULE CFG_MODULES
     ;
 
 
-AUTH:
+CFG_AUTH_MODULE:
+    CFG_AUTH_TYPE CFG_AUTH_DATA
     {
         DBGPRINT("Section: AUTH\n");
     }
     ;
 
-ACCOUNT:
+CFG_AUTH_TYPE:
+    CFG_AUTH CFG_PRIMARY
+    {
+        DBGPRINT("AUTH TYPE PRIMARY -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    | CFG_AUTH CFG_ADDITIONAL
+    {
+        DBGPRINT("AUTH TYPE ADDITIONAL -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    ;
+CFG_AUTH_DATA:
+    | CFG_AUTH_MAIN CFG_PAM_STRINGS CFG_AUTH_DATA
+    {
+        DBGPRINT("AUTH MAIN\n");
+    }
+    | CFG_AUTH_INITIAL CFG_PAM_STRINGS CFG_AUTH_DATA
+    {
+        DBGPRINT("AUTH INITIAL\n");
+    }
+    ;
+
+
+CFG_ACCOUNT_MODULE:
+    CFG_ACCOUNT_TYPE CFG_ACCOUNT_DATA
     {
         DBGPRINT("Section: ACCOUNT\n");
     }
     ;
 
-PASSWORD:
+CFG_ACCOUNT_TYPE:
+    CFG_ACCOUNT CFG_PRIMARY
+    {
+        DBGPRINT("ACCOUNT TYPE PRIMARY -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    | CFG_ACCOUNT CFG_ADDITIONAL
+    {
+        DBGPRINT("ACCOUNT TYPE ADDITIONAL -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    ;
+CFG_ACCOUNT_DATA:
+    | CFG_ACCOUNT_MAIN CFG_PAM_STRINGS CFG_ACCOUNT_DATA
+    {
+        DBGPRINT("ACCOUNT MAIN\n");
+    }
+    | CFG_ACCOUNT_INITIAL CFG_PAM_STRINGS CFG_ACCOUNT_DATA
+    {
+        DBGPRINT("ACCOUNT INITIAL\n");
+    }
+    ;
+
+
+CFG_PASSWORD_MODULE:
+    CFG_PASSWORD_TYPE CFG_PASSWORD_DATA
     {
         DBGPRINT("Section: PASSWORD\n");
     }
     ;
 
-SESSION:
+CFG_PASSWORD_TYPE:
+    CFG_PASSWORD CFG_PRIMARY
+    {
+        DBGPRINT("PASSWORD TYPE PRIMARY -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    | CFG_PASSWORD CFG_ADDITIONAL
+    {
+        DBGPRINT("PASSWORD TYPE ADDITIONAL -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    ;
+CFG_PASSWORD_DATA:
+    | CFG_PASSWORD_MAIN CFG_PAM_STRINGS CFG_PASSWORD_DATA
+    {
+        DBGPRINT("PASSWORD MAIN\n");
+    }
+    | CFG_PASSWORD_INITIAL CFG_PAM_STRINGS CFG_PASSWORD_DATA
+    {
+        DBGPRINT("PASSWORD INITIAL\n");
+    }
+    ;
+
+
+CFG_SESSION_MODULE:
+    CFG_SESSION_TYPE CFG_SESSION_DATA
     {
         DBGPRINT("Section: SESSION\n");
     }
     ;
 
-SESSION_NI:
+CFG_SESSION_TYPE:
+    | CFG_SESSION CFG_PRIMARY
     {
-        DBGPRINT("Section: SESSION Non-Interactive\n");
+        DBGPRINT("SESSION TYPE PRIMARY -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    | CFG_SESSION CFG_ADDITIONAL
+    {
+        DBGPRINT("SESSION TYPE ADDITIONAL -- %s\n", $2);
+        free($1);
+        free($2);
+    }
+    | CFG_SESSION_NI CFG_YES
+    {
+        DBGPRINT("SESSION NON-INTERACTIVE -- '%d' (YES)\n", $2);
+        free($1);
+    }
+    | CFG_SESSION_NI CFG_NO
+    {
+        DBGPRINT("SESSION NON-INTERACTIVE -- '%d' (NO)\n", $2);
+        free($1);
+    }
+    ;
+CFG_SESSION_DATA:
+    | CFG_SESSION_MAIN CFG_PAM_STRINGS CFG_SESSION_DATA
+    {
+        DBGPRINT("SESSION MAIN\n");
+    }
+    | CFG_SESSION_INITIAL CFG_PAM_STRINGS CFG_SESSION_DATA
+    {
+        DBGPRINT("SESSION INITIAL\n");
     }
     ;
 
+
+CFG_PAM_STRINGS:
+    | CFG_PAM_STRING CFG_PAM_STRINGS
+    {
+        DBGPRINT("PAM MODULE -- %s\n", $1);
+        free($1);
+    }
+    ;
 %%
 

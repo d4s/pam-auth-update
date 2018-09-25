@@ -8,47 +8,142 @@
 
 %}
 
-%x AUTH_GROUP
-%x ACCOUNT_GROUP
-%x PASSWORD_GROUP
-%x SESSION_GROUP
-%x SESSION_NI_GROUP
-
 %x STR
 %x BOOL
+%x TYPE
+%x PAM_STRING
+
 %%
 
 ^Name: {
     BEGIN(STR);
 	cfglval.str = strdup(cfgtext);
-	return(NAME);
+	return(CFG_NAME);
 }	
 
 <STR>.* {
     /* Any symbols till the EOS */
     cfglval.str = strdup( cfgtext );
     BEGIN(INITIAL);
-    return(STRING);
+    return(CFG_STRING);
 }
 
 ^Default: {
-    BEGIN(BOOL);
 	cfglval.str = strdup(cfgtext);
-	return(DEFAULT);
+	return(CFG_DEFAULT);
 }	
 
-<BOOL>[^[:blank:]]*yes {
-    cfglval.str = strdup( cfgtext );
-    BEGIN(INITIAL);
-    return(YES);
+^Priority: {
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PRIORITY);
 }
-<BOOL>[^[:blank:]]*no {
-    cfglval.str = strdup( cfgtext );
-    BEGIN(INITIAL);
-    return(NO);
+
+<*>^Auth-Type: {
+    BEGIN(TYPE);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_AUTH);
+}
+
+<*>^Auth: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_AUTH_MAIN);
+}
+<*>^Auth-Initial: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_AUTH_INITIAL);
+}
+
+<*>^Account-Type: {
+    BEGIN(TYPE);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_ACCOUNT);
+}
+<*>^Account: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_ACCOUNT_MAIN);
+}
+<*>^Account-Initial: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_ACCOUNT_INITIAL);
+}
+
+<*>^Password-Type: {
+    BEGIN(TYPE);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PASSWORD);
+}
+<*>^Password: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PASSWORD_MAIN);
+}
+<*>^Password-Initial: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PASSWORD_INITIAL);
+}
+
+<*>^Session-Type: {
+    BEGIN(TYPE);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_SESSION);
+}
+<*>^Session-Interactive-Only: {
+	cfglval.str = strdup(cfgtext);
+    return(CFG_SESSION_NI);
+}
+<*>^Session: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_SESSION_MAIN);
+}
+<*>^Session-Initial: {
+    BEGIN(PAM_STRING);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_SESSION_INITIAL);
 }
 
 
+
+<PAM_STRING>^[[:blank:]].* {
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PAM_STRING);
+}
+
+<TYPE>Primary {
+    BEGIN(INITIAL);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_PRIMARY);
+}
+<TYPE>Additional {
+    BEGIN(INITIAL);
+	cfglval.str = strdup(cfgtext);
+    return(CFG_ADDITIONAL);
+}
+
+
+yes {
+    cfglval.num = 1;
+    BEGIN(INITIAL);
+    return(CFG_YES);
+}
+no {
+    cfglval.num = 0;
+    BEGIN(INITIAL);
+    return(CFG_NO);
+}
+
+<*>[0-9]+                               {
+        cfglval.num=atoi(cfgtext); 
+        return(CFG_NUMBER);
+}
+
+<*>\n ;
+<*>. ;
 %%
 
 
