@@ -21,6 +21,7 @@ void help(void) {
 int parse_args(args_t *args, int argc, char **argv){
 
     memset(args, 0, sizeof(args_t));
+    
     while(1) {
         int c;
         int option_index = 0;
@@ -29,6 +30,9 @@ int parse_args(args_t *args, int argc, char **argv){
             {"remove",  no_argument, 0, 'r' },
             {"force",   no_argument, 0, 'f' },
             {"help",    no_argument, 0, 'h' },
+            {"configdir", required_argument, 0, 'C' },
+            {"templatedir", required_argument, 0, 'T' },
+            {"outputdir", required_argument, 0, 'O' },
             {0, 0, 0, 0 }
         };
 
@@ -51,6 +55,15 @@ int parse_args(args_t *args, int argc, char **argv){
             case 'f':
                 args->force= 1;
                 break;
+            case 'C':
+                configdir = optarg;
+                break;
+            case 'T':
+                templatedir = optarg;
+                break;
+            case 'O':
+                outputdir = optarg;
+                break;
             case 'h':
                 help();
                 return 0;
@@ -63,6 +76,11 @@ int parse_args(args_t *args, int argc, char **argv){
     /* get the name of package from environment */
     if(args->package) {
     }
+
+    /* Set default system values if not set via command line */
+    if(configdir == NULL) configdir = CONFIGDIR;
+    if(templatedir == NULL) templatedir = TEMPLATEDIR;
+    if(outputdir == NULL) outputdir = OUTPUTDIR;
 
 	return 0;
 }

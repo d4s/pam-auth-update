@@ -24,6 +24,18 @@
 /* How many elements in block by default */
 #define ELEMENTS 256
 
+/* Max size of path to file */
+#define FILENAME_SIZE 256
+
+/* Default system paths */
+#define CONFIGDIR "/usr/share/pam-configs"
+#define TEMPLATEDIR "/usr/share/pam"
+#define OUTPUTDIR "/etc/pam.d"
+
+extern char *configdir;
+extern char *templatedir;
+extern char *outputdir;
+
 typedef enum {
     NONE,
     AUTH,
@@ -56,7 +68,9 @@ typedef struct common_configuration {
 
 extern common_configuration_t *common;
 
+int init_common_conf();
 void clear_common_conf(common_conf_t *conf);
+int read_common_conf();
 
 #ifdef DEBUG
 void print_configuration();

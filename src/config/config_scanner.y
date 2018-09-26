@@ -12,13 +12,9 @@ typedef enum {
 } block_t;
 
 int cfglex();
+int cfgerror (const char *s);
 
 extern int cfglineno;
-
-int cfgerror (const char *s) {
-	DBGPRINT("Config error : %s at line %d\n",s, cfglineno);
-	return 0;
-}
 
 int priority;
 int default_conf;
@@ -32,25 +28,7 @@ pam_str_t *block_modules;
 
 module_t module;
 
-void copy_collected(common_conf_t *target){
-
-    if(target == NULL)
-        return;
-
-    for(int i=0; i<conf.primary_num; i++){
-        int num = target->primary_num;
-        target->primary[num].priority = priority;
-        target->primary[num].module = strdup(block_modules[i].module);
-        (target->primary_num)++;
-    }
-
-    for(int i=0; i<conf.additional_num; i++){
-        int num = target->additional_num;
-        target->additional[num].priority = conf.additional[i].priority;
-        target->additional[num].module = strdup(conf.additional[i].module);
-        (target->additional_num)++;
-    }
-}
+void copy_collected(common_conf_t *target);
 %}
 
 // Symbols.
@@ -435,4 +413,29 @@ EOF:
     ;
 
 %%
+int cfgerror (const char *s) {
+	DBGPRINT("Config error : %s at line %d\n",s, cfglineno);
+	return 0;
+}
+
+
+void copy_collected(common_conf_t *target){
+
+    if(target == NULL)
+        return;
+
+    for(int i=0; i<conf.primary_num; i++){
+        int num = target->primary_num;
+        target->primary[num].priority = priority;
+        target->primary[num].module = strdup(block_modules[i].module);
+        (target->primary_num)++;
+    }
+
+    for(int i=0; i<conf.additional_num; i++){
+        int num = target->additional_num;
+        target->additional[num].priority = conf.additional[i].priority;
+        target->additional[num].module = strdup(conf.additional[i].module);
+        (target->additional_num)++;
+    }
+}
 
