@@ -2,21 +2,17 @@
 
 %{
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <pam-auth-update.h>
 
-#define YYERROR_VERBOSE 1
+typedef enum {
+    PRIMARY,
+    ADDITIONAL
+} block_t;
 
-#define DEBUG 1
+int cfglex();
 
-#ifdef DEBUG
-// TODO: change variadic macros
-#define DBGPRINT(fmt, args...) \
-    { fprintf(stderr, "%s:%d %s(): ", __FILE__, __LINE__, __func__ ); \
-    fprintf(stderr, fmt, ##args);}
-#else
-#define DBGPRINT(fmt, args...) while(0){}
-#endif
-
-int cfg_debug=1;
 extern int cfglineno;
 
 int cfgerror (const char *s) {
@@ -24,6 +20,15 @@ int cfgerror (const char *s) {
 	return 0;
 }
 
+int priority;
+int default_conf;
+common_conf_t conf;
+
+block_t block;
+int *block_num;
+pam_str_t *block_modules;
+
+module_t module;
 %}
 
 // Symbols.
@@ -64,6 +69,7 @@ int cfgerror (const char *s) {
 %token <str> CFG_SESSION_INITIAL
 %token <str> CFG_SESSION_NI
 
+%token END 0 "End of file"
 
 %destructor { 
 	DBGPRINT("Unexpected NAME %s at line %d\n", $$, cfglineno);
@@ -83,7 +89,7 @@ int cfgerror (const char *s) {
 
 /** Configuration for pam-auth-update **/
 CONFIG:
-    CFG_HNAME CFG_HDEFAULT CFG_HPRIORITY CFG_MODULES
+    CFG_HNAME CFG_HDEFAULT CFG_HPRIORITY CFG_MODULES EOF
     ;
 
 CFG_HNAME:
@@ -92,6 +98,20 @@ CFG_HNAME:
         DBGPRINT("NAME -- %s\n", $2);
         free($1);
         free($2);
+
+        /* Set defaults */
+        priority = 0;
+        default_conf = 1;
+        block = PRIMARY;
+        /* New structure */
+        memset(&conf, 0, sizeof(common_conf_t));
+        conf.primary = calloc(ELEMENTS, sizeof(pam_str_t));
+        conf.additional = calloc(ELEMENTS, sizeof(pam_str_t));
+        if (conf.primary == NULL || conf.additional == NULL){
+            DBGPRINT("Memory allocation error");
+            exit(1);
+        }
+        module = NONE;
     }
     ;
 
@@ -100,11 +120,13 @@ CFG_HDEFAULT:
     {
         DBGPRINT("DEFAULT -- '%d' (YES)\n", $2);
         free($1);
+        default_conf = 1;
     }
     | CFG_DEFAULT CFG_NO
     {
         DBGPRINT("DEFAULT -- '%d' (NO)\n", $2);
         free($1);
+        default_conf = 0;
     }
     ;
 
@@ -113,11 +135,13 @@ CFG_HPRIORITY:
     {
         DBGPRINT("Priority -- '%d'\n", $2);
         free($1);
+
+        priority = $2;
     }
     ;
 
 CFG_MODULES:
-    | CFG_AUTH_MODULE CFG_MODULES
+    | CFG_AUTH_MODULE COPY_COLLECTED CFG_MODULES
     | CFG_ACCOUNT_MODULE CFG_MODULES
     | CFG_PASSWORD_MODULE CFG_MODULES
     | CFG_SESSION_MODULE CFG_MODULES
@@ -132,28 +156,43 @@ CFG_AUTH_MODULE:
     ;
 
 CFG_AUTH_TYPE:
-    CFG_AUTH CFG_PRIMARY
+    | CFG_AUTH CFG_PRIMARY
     {
         DBGPRINT("AUTH TYPE PRIMARY -- %s\n", $2);
         free($1);
         free($2);
+
+        block = PRIMARY;
+        block_num = &conf.primary_num;
+        block_modules = conf.primary;
+        module = AUTH;
     }
     | CFG_AUTH CFG_ADDITIONAL
     {
         DBGPRINT("AUTH TYPE ADDITIONAL -- %s\n", $2);
         free($1);
         free($2);
+
+        block = ADDITIONAL;
+        block_num = &conf.additional_num;
+        block_modules = conf.additional;
+        module = AUTH;
     }
     ;
+
 CFG_AUTH_DATA:
-    | CFG_AUTH_MAIN CFG_PAM_STRINGS CFG_AUTH_DATA
+    | CFG_AUTH_DATA CFG_AUTH_MAIN
     {
         DBGPRINT("AUTH MAIN\n");
+        *block_num = 0;
     }
-    | CFG_AUTH_INITIAL CFG_PAM_STRINGS CFG_AUTH_DATA
+    | CFG_AUTH_DATA CFG_AUTH_INITIAL
     {
         DBGPRINT("AUTH INITIAL\n");
+        /* FIXME: for Apertis is used initial version if found */
+        *block_num = 0;
     }
+    | CFG_AUTH_DATA CFG_PAM_STRINGS
     ;
 
 
@@ -231,7 +270,7 @@ CFG_SESSION_MODULE:
     ;
 
 CFG_SESSION_TYPE:
-    | CFG_SESSION CFG_PRIMARY
+    CFG_SESSION CFG_PRIMARY
     {
         DBGPRINT("SESSION TYPE PRIMARY -- %s\n", $2);
         free($1);
@@ -265,13 +304,51 @@ CFG_SESSION_DATA:
     }
     ;
 
-
 CFG_PAM_STRINGS:
     | CFG_PAM_STRING CFG_PAM_STRINGS
     {
         DBGPRINT("PAM MODULE -- %s\n", $1);
+        /* Do not add this module if not set as default */
+
+        if(default_conf != 0) {
+            block_modules[*block_num].priority = priority;
+            block_modules[*block_num].module = strdup($1);
+            (*block_num)++;
+        }
+        DBGPRINT("STRINGS: block_num = %d\n", *block_num);
         free($1);
     }
     ;
+
+COPY_COLLECTED:
+    {
+        DBGPRINT("Copy collected data to common:\n");
+        common_conf_t *target;
+
+        switch(module) {
+            case AUTH:
+                DBGPRINT("Copy from %s\n", "AUTH");
+                target = &common->auth;
+                break;
+            default:
+                DBGPRINT("Copy from %d\n", (int)module);
+        }
+
+        for(int i=0; i<(*block_num);i++){
+            int num = target->primary_num;
+            target->primary[num].priority = priority;
+            target->primary[num].module = strdup(block_modules[i].module);
+            (target->primary_num)++;
+        }
+     }
+    ;
+
+EOF:
+    END
+    {
+        DBGPRINT("TXE END\n");
+    }
+    ;
+
 %%
 

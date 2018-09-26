@@ -6,6 +6,7 @@
 #include "config.h"
 #include "config_scanner.h"
 
+#define yyterminate() return(END);
 %}
 
 %x STR
@@ -137,7 +138,7 @@ no {
     return(CFG_NO);
 }
 
-<*>[0-9]+                               {
+<*>[0-9]+ {
         cfglval.num=atoi(cfgtext); 
         return(CFG_NUMBER);
 }
@@ -145,5 +146,4 @@ no {
 <*>\n ;
 <*>. ;
 %%
-
 

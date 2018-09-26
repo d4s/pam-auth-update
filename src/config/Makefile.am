@@ -2,6 +2,7 @@ SUFFIXES = .c .h .y .l
 
 noinst_LIBRARIES = libconfig_scanner.a
 
+AM_CFLAGS += -Wno-variadic-macros -I$(top_srcdir)/src
 AM_YFLAGS = -d
 
 LEX_OUTPUT_ROOT = lex.cfg
