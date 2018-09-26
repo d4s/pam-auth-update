@@ -2,7 +2,7 @@ bin_PROGRAMS = pam-auth-update
 
 AM_CFLAGS += -Wno-variadic-macros -I$(top_srcdir)/src
 
-pam_auth_update_SOURCES = pam-auth-update.c pam-auth-update.h common_conf.c
+pam_auth_update_SOURCES = pam-auth-update.c pam-auth-update.h common_conf.c generate_pam_common.c
 pam_auth_update_SOURCES += parse_args.c parse_args.h
 
 pam_auth_update_LDADD = -ly

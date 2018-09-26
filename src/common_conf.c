@@ -1,13 +1,12 @@
 /**
  * @file common.c
  * @author Denis Pynkin (d4s) <denis.pynkin@collabora.com>
- * @brief 
+ * @brief Collect information from profiles.
  */
 
 #include <pam-auth-update.h>
 #include <parse_args.h>
 #include <config/config_scanner.h>
-#include <template/template_scanner.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
@@ -15,12 +14,6 @@
 
 extern void cfgset_in(FILE *in);
 int cfglex_destroy (void );
-
-common_configuration_t *common;
-
-char *configdir = NULL;
-char *templatedir = NULL;
-char *outputdir = NULL;
 
 int init_common_conf(){
     /* initialize common storage */
@@ -51,7 +44,7 @@ int init_common_conf(){
         common->session.additional == NULL ||
         common->session_ni.primary == NULL ||
         common->session_ni.additional ==NULL ) {
-    
+
         return 1;
     }
 
@@ -67,6 +60,7 @@ void clear_common_conf(common_conf_t *conf){
         }
     }
     conf->primary_num = 0;
+    free(conf->primary);
 
     if(conf->additional_num > 0) {
         for(int i=0; i < conf->additional_num; i++){
@@ -76,12 +70,17 @@ void clear_common_conf(common_conf_t *conf){
         }
     }
     conf->additional_num = 0;
+    free(conf->additional);
+}
+
+void clear_common_configuration(){
+    clear_common_conf(&common->auth);
 }
 
 static int conf_files_filter(const struct dirent *entry){
     char fname[FILENAME_SIZE];
     struct stat st;
-    
+
     if(entry->d_name == NULL)
         return 0;
 
@@ -98,8 +97,10 @@ int read_common_conf() {
     int entries;
     struct dirent **configs;
 
+
     if( (entries = scandir(configdir, &configs, conf_files_filter, alphasort)) == -1){
-        return 1;
+        free(configs);
+        return 0;
     }
 
     while (entries--){
@@ -108,16 +109,25 @@ int read_common_conf() {
 
         snprintf(fname, sizeof(fname), "%s/%s", configdir, configs[entries]->d_name);
         DBGPRINT("Config found: %s\n", fname);
-   
+        free(configs[entries]);
+
         FILE *fp;
         fp = fopen(fname, "r");
         cfgset_in(fp);
         cfgparse();
         cfglex_destroy();
+        fclose(fp);
     }
+
+    free(configs);
 
     return 0;
 }
+
+
+/* Sort all collected modules by priority */
+
+
 
 #ifdef DEBUG
 void print_config(common_conf_t *conf){
@@ -158,6 +168,3 @@ void print_configuration(){
     print_config(&common->session_ni);
 }
 #endif /* DEBUG */
-
-
-

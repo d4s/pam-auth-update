@@ -69,8 +69,9 @@ typedef struct common_configuration {
 extern common_configuration_t *common;
 
 int init_common_conf();
-void clear_common_conf(common_conf_t *conf);
 int read_common_conf();
+void clear_common_conf(common_conf_t *conf);
+void clear_common_configuration();
 
 #ifdef DEBUG
 void print_configuration();

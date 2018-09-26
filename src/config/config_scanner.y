@@ -409,6 +409,7 @@ EOF:
     END
     {
         DBGPRINT("TXE END\n");
+        clear_common_conf(&conf);
     }
     ;
 
