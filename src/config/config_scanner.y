@@ -29,6 +29,23 @@ int *block_num;
 pam_str_t *block_modules;
 
 module_t module;
+
+void copy_collected(common_conf_t *target){
+
+    if(target != NULL) {
+        for(int i=0; i<(*block_num);i++){
+            int num = target->primary_num;
+            target->primary[num].priority = priority;
+            target->primary[num].module = strdup(block_modules[i].module);
+            (target->primary_num)++;
+
+            num = target->additional_num;
+            target->additional[num].priority = priority;
+            target->additional[num].module = strdup(block_modules[i].module);
+            (target->additional_num)++;
+        }
+    }
+}
 %}
 
 // Symbols.
@@ -142,9 +159,9 @@ CFG_HPRIORITY:
 
 CFG_MODULES:
     | CFG_AUTH_MODULE COPY_COLLECTED CFG_MODULES
-    | CFG_ACCOUNT_MODULE CFG_MODULES
-    | CFG_PASSWORD_MODULE CFG_MODULES
-    | CFG_SESSION_MODULE CFG_MODULES
+    | CFG_ACCOUNT_MODULE COPY_COLLECTED CFG_MODULES
+    | CFG_PASSWORD_MODULE COPY_COLLECTED CFG_MODULES
+    | CFG_SESSION_MODULE COPY_COLLECTED CFG_MODULES
     ;
 
 
@@ -209,25 +226,37 @@ CFG_ACCOUNT_TYPE:
         DBGPRINT("ACCOUNT TYPE PRIMARY -- %s\n", $2);
         free($1);
         free($2);
+
+        block = PRIMARY;
+        block_num = &conf.primary_num;
+        block_modules = conf.primary;
+        module = ACCOUNT;
     }
     | CFG_ACCOUNT CFG_ADDITIONAL
     {
         DBGPRINT("ACCOUNT TYPE ADDITIONAL -- %s\n", $2);
         free($1);
         free($2);
+
+        block = ADDITIONAL;
+        block_num = &conf.additional_num;
+        block_modules = conf.additional;
+        module = ACCOUNT;
     }
     ;
 CFG_ACCOUNT_DATA:
-    | CFG_ACCOUNT_MAIN CFG_PAM_STRINGS CFG_ACCOUNT_DATA
+    | CFG_ACCOUNT_DATA CFG_ACCOUNT_MAIN 
     {
         DBGPRINT("ACCOUNT MAIN\n");
+        *block_num = 0;
     }
-    | CFG_ACCOUNT_INITIAL CFG_PAM_STRINGS CFG_ACCOUNT_DATA
+    | CFG_ACCOUNT_DATA CFG_ACCOUNT_INITIAL 
     {
         DBGPRINT("ACCOUNT INITIAL\n");
+        *block_num = 0;
     }
+    | CFG_ACCOUNT_DATA CFG_PAM_STRINGS
     ;
-
 
 CFG_PASSWORD_MODULE:
     CFG_PASSWORD_TYPE CFG_PASSWORD_DATA
@@ -242,23 +271,36 @@ CFG_PASSWORD_TYPE:
         DBGPRINT("PASSWORD TYPE PRIMARY -- %s\n", $2);
         free($1);
         free($2);
+
+        block = PRIMARY;
+        block_num = &conf.primary_num;
+        block_modules = conf.primary;
+        module = PASSWORD;
     }
     | CFG_PASSWORD CFG_ADDITIONAL
     {
         DBGPRINT("PASSWORD TYPE ADDITIONAL -- %s\n", $2);
         free($1);
         free($2);
+
+        block = ADDITIONAL;
+        block_num = &conf.additional_num;
+        block_modules = conf.additional;
+        module = PASSWORD;
     }
     ;
 CFG_PASSWORD_DATA:
-    | CFG_PASSWORD_MAIN CFG_PAM_STRINGS CFG_PASSWORD_DATA
+    | CFG_PASSWORD_DATA CFG_PASSWORD_MAIN
     {
         DBGPRINT("PASSWORD MAIN\n");
+        *block_num = 0;
     }
-    | CFG_PASSWORD_INITIAL CFG_PAM_STRINGS CFG_PASSWORD_DATA
+    | CFG_PASSWORD_DATA CFG_PASSWORD_INITIAL
     {
         DBGPRINT("PASSWORD INITIAL\n");
+        *block_num = 0;
     }
+    | CFG_PASSWORD_DATA CFG_PAM_STRINGS
     ;
 
 
@@ -275,12 +317,22 @@ CFG_SESSION_TYPE:
         DBGPRINT("SESSION TYPE PRIMARY -- %s\n", $2);
         free($1);
         free($2);
+
+        block = PRIMARY;
+        block_num = &conf.primary_num;
+        block_modules = conf.primary;
+        module = SESSION;
     }
     | CFG_SESSION CFG_ADDITIONAL
     {
         DBGPRINT("SESSION TYPE ADDITIONAL -- %s\n", $2);
         free($1);
         free($2);
+
+        block = ADDITIONAL;
+        block_num = &conf.additional_num;
+        block_modules = conf.additional;
+        module = SESSION;
     }
     | CFG_SESSION_NI CFG_YES
     {
@@ -294,14 +346,17 @@ CFG_SESSION_TYPE:
     }
     ;
 CFG_SESSION_DATA:
-    | CFG_SESSION_MAIN CFG_PAM_STRINGS CFG_SESSION_DATA
+    | CFG_SESSION_DATA CFG_SESSION_MAIN
     {
         DBGPRINT("SESSION MAIN\n");
+        *block_num = 0;
     }
-    | CFG_SESSION_INITIAL CFG_PAM_STRINGS CFG_SESSION_DATA
+    | CFG_SESSION_DATA CFG_SESSION_INITIAL
     {
         DBGPRINT("SESSION INITIAL\n");
+        *block_num = 0;
     }
+    | CFG_SESSION_DATA CFG_PAM_STRINGS
     ;
 
 CFG_PAM_STRINGS:
@@ -330,16 +385,23 @@ COPY_COLLECTED:
                 DBGPRINT("Copy from %s\n", "AUTH");
                 target = &common->auth;
                 break;
+            case ACCOUNT:
+                DBGPRINT("Copy from %s\n", "ACCOUNT");
+                target = &common->account;
+                break;
+            case PASSWORD:
+                DBGPRINT("Copy from %s\n", "PASSWORD");
+                target = &common->password;
+                break;
+            case SESSION:
+                DBGPRINT("Copy from %s\n", "SESSION");
+                target = &common->session;
+                break;
             default:
                 DBGPRINT("Copy from %d\n", (int)module);
+                target = NULL;
         }
-
-        for(int i=0; i<(*block_num);i++){
-            int num = target->primary_num;
-            target->primary[num].priority = priority;
-            target->primary[num].module = strdup(block_modules[i].module);
-            (target->primary_num)++;
-        }
+        copy_collected(target);
      }
     ;
 
