@@ -56,5 +56,10 @@ typedef struct common_configuration {
 
 extern common_configuration_t *common;
 
+void clear_common_conf(common_conf_t *conf);
+
+#ifdef DEBUG
 void print_configuration();
+#endif
+
 #endif /* PAM_AUTH_UPDATE_H */

@@ -43,10 +43,11 @@ int main(int argc, char **argv) {
     common->session_ni.primary = calloc(ELEMENTS, sizeof(pam_str_t));
     common->session_ni.additional = calloc(ELEMENTS, sizeof(pam_str_t));
 
-
-    print_configuration();
     cfgparse();
+
+#ifdef DEBUG
     print_configuration();
+#endif
     return 0;
 
 
@@ -57,6 +58,27 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+void clear_common_conf(common_conf_t *conf){
+    if(conf->primary_num > 0) {
+        for(int i=0; i < conf->primary_num; i++){
+            if(conf->primary[i].module != NULL)
+                free(conf->primary[i].module);
+                conf->primary[i].priority = 0;
+        }
+    }
+    conf->primary_num = 0;
+
+    if(conf->additional_num > 0) {
+        for(int i=0; i < conf->additional_num; i++){
+            if(conf->additional[i].module != NULL)
+                free(conf->additional[i].module);
+                conf->additional[i].priority = 0;
+        }
+    }
+    conf->additional_num = 0;
+}
+
+#ifdef DEBUG
 void print_config(common_conf_t *conf){
     fprintf(stderr, "Primary block: %d\n", conf->primary_num);
     if(conf->primary_num > 0) {
@@ -89,3 +111,5 @@ void print_configuration(){
     fprintf(stderr, "######## %s #######\n", "Session Non-Interactive");
     print_config(&common->session_ni);
 }
+#endif /* DEBUG */
+

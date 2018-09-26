@@ -24,6 +24,8 @@ int priority;
 int default_conf;
 common_conf_t conf;
 
+int session_interactive_only;
+
 block_t block;
 int *block_num;
 pam_str_t *block_modules;
@@ -32,18 +34,21 @@ module_t module;
 
 void copy_collected(common_conf_t *target){
 
-    if(target != NULL) {
-        for(int i=0; i<(*block_num);i++){
-            int num = target->primary_num;
-            target->primary[num].priority = priority;
-            target->primary[num].module = strdup(block_modules[i].module);
-            (target->primary_num)++;
+    if(target == NULL)
+        return;
 
-            num = target->additional_num;
-            target->additional[num].priority = priority;
-            target->additional[num].module = strdup(block_modules[i].module);
-            (target->additional_num)++;
-        }
+    for(int i=0; i<conf.primary_num; i++){
+        int num = target->primary_num;
+        target->primary[num].priority = priority;
+        target->primary[num].module = strdup(block_modules[i].module);
+        (target->primary_num)++;
+    }
+
+    for(int i=0; i<conf.additional_num; i++){
+        int num = target->additional_num;
+        target->additional[num].priority = conf.additional[i].priority;
+        target->additional[num].module = strdup(conf.additional[i].module);
+        (target->additional_num)++;
     }
 }
 %}
@@ -129,6 +134,7 @@ CFG_HNAME:
             exit(1);
         }
         module = NONE;
+        session_interactive_only = 0;
     }
     ;
 
@@ -201,13 +207,14 @@ CFG_AUTH_DATA:
     | CFG_AUTH_DATA CFG_AUTH_MAIN
     {
         DBGPRINT("AUTH MAIN\n");
-        *block_num = 0;
+        free($2);
     }
     | CFG_AUTH_DATA CFG_AUTH_INITIAL
     {
         DBGPRINT("AUTH INITIAL\n");
         /* FIXME: for Apertis is used initial version if found */
-        *block_num = 0;
+        clear_common_conf(&conf);
+        free($2);
     }
     | CFG_AUTH_DATA CFG_PAM_STRINGS
     ;
@@ -248,12 +255,14 @@ CFG_ACCOUNT_DATA:
     | CFG_ACCOUNT_DATA CFG_ACCOUNT_MAIN 
     {
         DBGPRINT("ACCOUNT MAIN\n");
-        *block_num = 0;
+        free($2);
     }
     | CFG_ACCOUNT_DATA CFG_ACCOUNT_INITIAL 
     {
         DBGPRINT("ACCOUNT INITIAL\n");
-        *block_num = 0;
+        /* FIXME: for Apertis is used initial version if found */
+        clear_common_conf(&conf);
+        free($2);
     }
     | CFG_ACCOUNT_DATA CFG_PAM_STRINGS
     ;
@@ -293,12 +302,14 @@ CFG_PASSWORD_DATA:
     | CFG_PASSWORD_DATA CFG_PASSWORD_MAIN
     {
         DBGPRINT("PASSWORD MAIN\n");
-        *block_num = 0;
+        free($2);
     }
     | CFG_PASSWORD_DATA CFG_PASSWORD_INITIAL
     {
         DBGPRINT("PASSWORD INITIAL\n");
-        *block_num = 0;
+        /* FIXME: for Apertis is used initial version if found */
+        clear_common_conf(&conf);
+        free($2);
     }
     | CFG_PASSWORD_DATA CFG_PAM_STRINGS
     ;
@@ -338,23 +349,29 @@ CFG_SESSION_TYPE:
     {
         DBGPRINT("SESSION NON-INTERACTIVE -- '%d' (YES)\n", $2);
         free($1);
+
+        session_interactive_only = 1;
     }
     | CFG_SESSION_NI CFG_NO
     {
         DBGPRINT("SESSION NON-INTERACTIVE -- '%d' (NO)\n", $2);
         free($1);
+
+        session_interactive_only = 0;
     }
     ;
 CFG_SESSION_DATA:
     | CFG_SESSION_DATA CFG_SESSION_MAIN
     {
         DBGPRINT("SESSION MAIN\n");
-        *block_num = 0;
+        free($2);
     }
     | CFG_SESSION_DATA CFG_SESSION_INITIAL
     {
         DBGPRINT("SESSION INITIAL\n");
-        *block_num = 0;
+        /* FIXME: for Apertis is used initial version if found */
+        clear_common_conf(&conf);
+        free($2);
     }
     | CFG_SESSION_DATA CFG_PAM_STRINGS
     ;
@@ -396,12 +413,17 @@ COPY_COLLECTED:
             case SESSION:
                 DBGPRINT("Copy from %s\n", "SESSION");
                 target = &common->session;
+                /* if flag is not set -- copy configuration for non-interactive session */
+                if(! session_interactive_only){
+                   copy_collected(&common->session_ni);
+                }
                 break;
             default:
                 DBGPRINT("Copy from %d\n", (int)module);
                 target = NULL;
         }
         copy_collected(target);
+        clear_common_conf(&conf);
      }
     ;
 
