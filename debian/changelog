@@ -1,0 +1,5 @@
+pam-auth-update (0.1-1) unstable; urgency=medium
+
+  * Initial release
+
+ -- Denis Pynkin <denis.pynkin@collabora.com>  Thu, 27 Sep 2018 01:15:12 +0000
