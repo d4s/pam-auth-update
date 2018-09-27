@@ -83,7 +83,28 @@ void clear_common_configuration(){
     clear_common_conf(&common->session_ni);
 }
 
-void validate_primary(common_conf_t *conf){
+static int cmp_modules_by_priority (const void *m1, const void *m2){
+    return ((pam_str_t *)m2)->priority - ((pam_str_t *)m1)->priority;
+}
+
+void subst_end(char *module, int val) {
+    char *str, buf[256];
+    int len;
+
+    /* TODO: more strict validation */
+    if(str = strstr(module, "=end")){
+        /* rest of string is started here */
+        len = str - module;
+
+        snprintf(buf, len+1, "%s", module);
+        sprintf(buf+len, "=%d%s", val, module + len + 4);
+
+        /* TODO: enough space only for 999 modules */
+        strcpy(module, buf);
+    }
+}
+
+void validate_modules(common_conf_t *conf){
     /* At least single primary module must exist */
     if(conf->primary_num == 0) {
         conf->primary_num = 1;
@@ -92,21 +113,16 @@ void validate_primary(common_conf_t *conf){
         sprintf(conf->primary[0].module,"%s", "\t[default=end]\t\t\tpam_permit.so\0");
     }
 
-    /* Substitute 'end' with the number in configuration */
-    char *str, buf[256];
-    int len;
+    /* Sort all collected modules by priority */
+    qsort(conf->primary, conf->primary_num, sizeof(pam_str_t), cmp_modules_by_priority);
+    qsort(conf->additional, conf->additional_num, sizeof(pam_str_t), cmp_modules_by_priority);
+
+    /* Substitute '=end' with the number in configuration */
     for(int i=0; i<conf->primary_num; i++){
-        /* TODO: more strict validation */
-        if(str = strstr(conf->primary[i].module, "=end")){
-            /* rest of string is started here */
-            len = str - conf->primary[i].module;
-
-            snprintf(buf, len+1, "%s", conf->primary[i].module);
-            sprintf(buf+len, "=%d%s", i+1, conf->primary[i].module + len + 4);
-
-            /* TODO: enough space only for 999 modules */
-            strcpy(conf->primary[i].module, buf);
-        }
+        subst_end( conf->primary[i].module, conf->primary_num - i);
+    }
+    for(int i=0; i<conf->additional_num; i++){
+        subst_end(conf->additional[i].module, conf->additional_num - i);
     }
 }
 
@@ -157,20 +173,15 @@ int read_common_conf() {
     }
 
     free(configs);
-
-    validate_primary(&common->auth);
-    validate_primary(&common->account);
-    validate_primary(&common->password);
-    validate_primary(&common->session);
-    validate_primary(&common->session_ni);
+ 
+    validate_modules(&common->auth);
+    validate_modules(&common->account);
+    validate_modules(&common->password);
+    validate_modules(&common->session);
+    validate_modules(&common->session_ni);
 
     return 0;
 }
-
-
-/* Sort all collected modules by priority */
-
-
 
 #ifdef DEBUG
 void print_config(common_conf_t *conf){
