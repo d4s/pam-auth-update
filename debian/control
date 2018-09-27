@@ -2,7 +2,8 @@ Source: pam-auth-update
 Section: admin
 Priority: optional
 Maintainer: Denis Pynkin <denis.pynkin@collabora.com>
-Build-Depends: debhelper (>= 9), autotools-dev
+Build-Depends: debhelper (>= 9), autotools-dev,
+  automake, flex, bison, m4
 Standards-Version: 3.9.8
 Homepage: https://gitlab.apertis.org/d4s/pam-auth-update/
 Vcs-Git: https://gitlab.apertis.org/d4s/pam-auth-update.git
