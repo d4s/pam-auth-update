@@ -35,13 +35,16 @@ int main(int argc, char **argv) {
         exit(1);
     }
     if(read_common_conf()){
-        exit(2);
+        exit(1);
     }
 
 #ifdef DEBUG
     print_configuration();
 #endif
 
+    if(gen_pam_common()){
+        exit(1);
+    }
     clear_common_configuration();
     return 0;
 }

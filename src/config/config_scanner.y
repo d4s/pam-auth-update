@@ -410,7 +410,9 @@ EOF:
     {
         DBGPRINT("TXE END\n");
         clear_common_conf(&conf);
-    }
+        free(conf.primary);
+        free(conf.additional);
+   }
     ;
 
 %%
@@ -424,11 +426,11 @@ void copy_collected(common_conf_t *target){
 
     if(target == NULL)
         return;
-
+    
     for(int i=0; i<conf.primary_num; i++){
         int num = target->primary_num;
-        target->primary[num].priority = priority;
-        target->primary[num].module = strdup(block_modules[i].module);
+        target->primary[num].priority = conf.primary[i].priority;
+        target->primary[num].module = strdup(conf.primary[i].module);
         (target->primary_num)++;
     }
 

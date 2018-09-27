@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 
 extern void cfgset_in(FILE *in);
-int cfglex_destroy (void );
+extern int cfglex_destroy (void );
 
 int init_common_conf(){
     /* initialize common storage */
@@ -56,25 +56,58 @@ void clear_common_conf(common_conf_t *conf){
         for(int i=0; i < conf->primary_num; i++){
             if(conf->primary[i].module != NULL)
                 free(conf->primary[i].module);
-                conf->primary[i].priority = 0;
+
+            conf->primary[i].module = NULL;
+            conf->primary[i].priority = 0;
         }
     }
     conf->primary_num = 0;
-    free(conf->primary);
 
     if(conf->additional_num > 0) {
         for(int i=0; i < conf->additional_num; i++){
             if(conf->additional[i].module != NULL)
                 free(conf->additional[i].module);
-                conf->additional[i].priority = 0;
+
+            conf->additional[i].module = NULL;
+            conf->additional[i].priority = 0;
         }
     }
     conf->additional_num = 0;
-    free(conf->additional);
 }
 
 void clear_common_configuration(){
     clear_common_conf(&common->auth);
+    clear_common_conf(&common->account);
+    clear_common_conf(&common->password);
+    clear_common_conf(&common->session);
+    clear_common_conf(&common->session_ni);
+}
+
+void validate_primary(common_conf_t *conf){
+    /* At least single primary module must exist */
+    if(conf->primary_num == 0) {
+        conf->primary_num = 1;
+        conf->primary[0].priority=0;
+        conf->primary[0].module=malloc(64);
+        sprintf(conf->primary[0].module,"%s", "\t[default=end]\t\t\tpam_permit.so\0");
+    }
+
+    /* Substitute 'end' with the number in configuration */
+    char *str, buf[256];
+    int len;
+    for(int i=0; i<conf->primary_num; i++){
+        /* TODO: more strict validation */
+        if(str = strstr(conf->primary[i].module, "=end")){
+            /* rest of string is started here */
+            len = str - conf->primary[i].module;
+
+            snprintf(buf, len+1, "%s", conf->primary[i].module);
+            sprintf(buf+len, "=%d%s", i+1, conf->primary[i].module + len + 4);
+
+            /* TODO: enough space only for 999 modules */
+            strcpy(conf->primary[i].module, buf);
+        }
+    }
 }
 
 static int conf_files_filter(const struct dirent *entry){
@@ -113,6 +146,10 @@ int read_common_conf() {
 
         FILE *fp;
         fp = fopen(fname, "r");
+        if(fp == NULL){
+            fprintf(stderr, "Can't open profile for read: %s\n", fname);
+            return 1;
+        }
         cfgset_in(fp);
         cfgparse();
         cfglex_destroy();
@@ -120,6 +157,12 @@ int read_common_conf() {
     }
 
     free(configs);
+
+    validate_primary(&common->auth);
+    validate_primary(&common->account);
+    validate_primary(&common->password);
+    validate_primary(&common->session);
+    validate_primary(&common->session_ni);
 
     return 0;
 }

@@ -73,6 +73,8 @@ int read_common_conf();
 void clear_common_conf(common_conf_t *conf);
 void clear_common_configuration();
 
+int gen_pam_common();
+
 #ifdef DEBUG
 void print_configuration();
 #endif

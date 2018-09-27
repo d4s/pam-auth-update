@@ -7,5 +7,4 @@ AM_YFLAGS = -d
 
 LEX_OUTPUT_ROOT = lex.tpl
 
-libtemplate_scanner_a_SOURCES = template_scanner.y
-libtemplate_scanner_a_SOURCES += template_parser.l
+libtemplate_scanner_a_SOURCES = template_parser.l
