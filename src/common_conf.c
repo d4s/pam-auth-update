@@ -140,7 +140,7 @@ static int conf_files_filter(const struct dirent *entry){
     return(st.st_mode & S_IFREG);
 }
 
-int read_common_conf() {
+int read_common_conf(args_t *args) {
     char fname[FILENAME_SIZE];
     DIR *dir;
     int entries;
@@ -154,6 +154,11 @@ int read_common_conf() {
 
     while (entries--){
         if(configs[entries]->d_name == NULL)
+            continue;
+
+        /* Do not read the config on package removal */
+        if( args->remove && 
+            strcmp(configs[entries]->d_name, args->package_name) == 0)
             continue;
 
         snprintf(fname, sizeof(fname), "%s/%s", configdir, configs[entries]->d_name);

@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     if(init_common_conf()){
         exit(1);
     }
-    if(read_common_conf()){
+    if(read_common_conf(&args)){
         exit(1);
     }
 

@@ -6,6 +6,7 @@
 
 #include <getopt.h>
 #include <string.h>
+#include <stdlib.h>
 #include <pam-auth-update.h>
 #include <parse_args.h>
 
@@ -74,7 +75,8 @@ int parse_args(args_t *args, int argc, char **argv){
     }
 
     /* get the name of package from environment */
-    if(args->package) {
+    if(args->package || args->remove) {
+        args->package_name = getenv("DPKG_MAINTSCRIPT_NAME");
     }
 
     /* Set default system values if not set via command line */
